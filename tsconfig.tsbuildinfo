@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/gifcard.tsx","./src/components/gifmodal.tsx","./src/components/searchbar.tsx","./src/hooks/usegifsearch.ts","./src/pages/homepage.tsx","./src/services/giphy.ts","./src/types/giphytypes.ts"],"errors":true,"version":"5.9.3"}
