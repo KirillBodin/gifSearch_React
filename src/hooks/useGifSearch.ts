@@ -1,76 +1,118 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GiphyGif } from "../types/GiphyTypes";
-import { searchGifs } from "../services/giphy";
+import { searchGifs } from "../api/giphyClient";
 
 const PAGE_SIZE = 20;
 
-export function useGifSearch() {
+type Status = "idle" | "loading" | "success" | "error";
+
+interface UseGifSearchResult {
+  gifs: GiphyGif[];
+  status: Status;
+  isLoadingMore: boolean;
+  errorMessage: string | null;
+  hasMore: boolean;
+  query: string;
+  search: (query: string) => void;
+  loadMore: () => void;
+}
+
+export function useGifSearch(): UseGifSearchResult {
   const [gifs, setGifs] = useState<GiphyGif[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastQuery, setLastQuery] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
-  const search = useCallback(async (query: string) => {
-    const trimmed = query.trim();
-    setLastQuery(trimmed);
-    setError(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-    if (!trimmed) {
-      setGifs([]);
-      setTotalCount(0);
-      setOffset(0);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const result = await searchGifs(trimmed, PAGE_SIZE, 0);
-
-      setGifs(result.gifs);
-      setTotalCount(result.totalCount);
-      setOffset(result.offset + result.gifs.length);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load GIFs. Check console.");
-      setGifs([]);
-      setTotalCount(0);
-      setOffset(0);
-    } finally {
-      setIsLoading(false);
+  const cancelOngoingRequest = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
   }, []);
 
-  const loadMore = useCallback(async () => {
-    if (!lastQuery) return;
-    if (gifs.length >= totalCount) return;
+  const fetchPage = useCallback(
+    async (nextQuery: string, nextOffset: number, isLoadMore = false) => {
+      if (!nextQuery.trim()) return;
 
-    try {
-      setIsLoadingMore(true);
-      const result = await searchGifs(lastQuery, PAGE_SIZE, offset);
+      cancelOngoingRequest();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
-      setGifs((prev) => [...prev, ...result.gifs]);
-      setOffset((prev) => prev + result.gifs.length);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load more GIFs.");
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [lastQuery, gifs.length, totalCount, offset]);
+      if (!isLoadMore) {
+        setStatus("loading");
+        setErrorMessage(null);
+      } else {
+        setIsLoadingMore(true);
+      }
 
-  const hasMore = gifs.length < totalCount;
+      try {
+        const response = await searchGifs({
+          query: nextQuery,
+          limit: PAGE_SIZE,
+          offset: nextOffset,
+          signal: controller.signal,
+        });
+
+        setHasMore(
+          response.pagination.offset + response.pagination.count <
+            response.pagination.total_count
+        );
+
+        setGifs((prev) =>
+          isLoadMore ? [...prev, ...response.data] : response.data
+        );
+        setOffset(nextOffset + PAGE_SIZE);
+        setStatus("success");
+      } catch (error: unknown) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Failed to fetch gifs", error);
+        setErrorMessage(
+          error instanceof Error ? error.message : "Failed to load GIFs"
+        );
+        setStatus("error");
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [cancelOngoingRequest]
+  );
+
+  const search = useCallback(
+    (newQuery: string) => {
+      setQuery(newQuery);
+      setOffset(0);
+      setGifs([]);
+      fetchPage(newQuery, 0, false);
+    },
+    [fetchPage]
+  );
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || status === "loading" || isLoadingMore) return;
+    fetchPage(query, offset, true);
+  }, [fetchPage, query, offset, hasMore, status, isLoadingMore]);
+
+  useEffect(() => {
+    return () => {
+      cancelOngoingRequest();
+    };
+  }, [cancelOngoingRequest]);
 
   return {
     gifs,
-    isLoading,
+    status,
     isLoadingMore,
-    error,
-    lastQuery,
-    totalCount,
+    errorMessage,
     hasMore,
+    query,
     search,
     loadMore,
   };

@@ -1,48 +1,35 @@
-export interface GiphyImages {
-    original: {
-      url: string;
-      width: string;
-      height: string;
-      size: string;
-    };
-    fixed_height: {
-      url: string;
-      width: string;
-      height: string;
-      size: string;
-    };
+export interface GiphyImageFormat {
+    url: string;
+    width: string;
+    height: string;
+    size?: string;
   }
   
-  export interface GiphyUser {
-    username?: string;
-    display_name?: string;
-    avatar_url?: string;
+  export interface GiphyImages {
+    original: GiphyImageFormat;
+    preview_gif?: GiphyImageFormat;
+    fixed_width?: GiphyImageFormat;
   }
   
   export interface GiphyGif {
     id: string;
-    url: string;
-    slug: string;
     title: string;
-    username: string;
-    rating: string;
-    import_datetime: string;
-    trending_datetime: string;
+    url: string;
     images: GiphyImages;
-    user?: GiphyUser;
+  
+    username?: string;
+    import_datetime?: string;
+    rating?: string;
   }
   
-  export interface GiphySearchResponse {
+  export interface GiphyPagination {
+    total_count: number;
+    count: number;
+    offset: number;
+  }
+  
+  export interface SearchGifsResponse {
     data: GiphyGif[];
-    pagination: {
-      total_count: number;
-      count: number;
-      offset: number;
-    };
-    meta: {
-      status: number;
-      msg: string;
-      response_id: string;
-    };
+    pagination: GiphyPagination;
   }
   

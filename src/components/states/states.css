@@ -1,0 +1,45 @@
+.state {
+    text-align: center;
+    padding: 32px 16px;
+    color: #e5e5e5;
+  }
+  
+  .state__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .state__text {
+    margin: 0;
+    color: #b0b0b0;
+  }
+  
+  .state__spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid #444;
+    border-top-color: #f5f5f5;
+    margin: 0 auto 12px;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  .state--error {
+    color: #fecaca;
+  }
+  
+  .state--error .state__title {
+    color: #fca5a5;
+  }
+  
+  .state--empty .state__title {
+    color: #e5e5e5;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
