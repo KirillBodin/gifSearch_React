@@ -2,7 +2,8 @@ import type { SearchGifsResponse } from "../types/GiphyTypes";
 
 const API_BASE_URL = "https://api.giphy.com/v1/gifs";
 
-const API_KEY = (import.meta as any).env.VITE_GIPHY_API_KEY as string;
+const API_KEY = import.meta.env.VITE_GIPHY_API_KEY;
+
 
 if (!API_KEY) {
   console.error("Missing VITE_GIPHY_API_KEY in environment variables");
